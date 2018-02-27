@@ -204,6 +204,7 @@ class TransferHistoryRow extends React.Component {
                     <Memo
                         text={data.memo}
                         username={context}
+                        otherAccount={other_account}
                         isFromBadActor={
                             BadActorList.indexOf(other_account) > -1
                         }

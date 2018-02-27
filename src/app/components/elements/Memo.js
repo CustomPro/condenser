@@ -10,9 +10,11 @@ class Memo extends React.Component {
         text: PropTypes.string,
         username: PropTypes.string,
         isFromBadActor: PropTypes.bool.isRequired,
+        otherAccount: PropTypes.string,
         // redux props
         myAccount: PropTypes.bool,
         memo_private: PropTypes.object,
+        involvesNegativeRepUser: PropTypes.bool.isRequired,
     };
 
     constructor() {
@@ -20,6 +22,7 @@ class Memo extends React.Component {
         this.shouldComponentUpdate = shouldComponentUpdate(this, 'Memo');
         this.state = {
             revealBadActorMemo: false,
+            revealNegativeRepMemo: false,
         };
     }
 
@@ -37,14 +40,28 @@ class Memo extends React.Component {
         this.setState({ revealBadActorMemo: true });
     };
 
+    onRevealNegativeRepMemo = e => {
+        e.preventDefault();
+        this.setState({ revealNegativeRepMemo: true });
+    };
+
     render() {
         const { decodeMemo } = this;
-        const { memo_private, text, myAccount, isFromBadActor } = this.props;
+        const {
+            memo_private,
+            text,
+            myAccount,
+            isFromBadActor,
+            involvesNegativeRepUser,
+        } = this.props;
         const isEncoded = /^#/.test(text);
+
+        if (!text || text.length < 1) return <span />;
 
         const classes = classnames({
             Memo: true,
             'Memo--badActor': isFromBadActor,
+            'Memo--involvesNegativeRepUser': involvesNegativeRepUser,
             'Memo--private': memo_private,
         });
 
@@ -78,6 +95,32 @@ class Memo extends React.Component {
             );
         }
 
+        if (involvesNegativeRepUser && !this.state.revealNegativeRepMemo) {
+            renderText = (
+                <div className="involves-negative-rep-user-warning">
+                    <div className="involves-negative-rep-user-caution">
+                        {tt(
+                            'transferhistoryrow_jsx.involves_negative_rep_user_caution'
+                        )}
+                    </div>
+                    <div className="involves-negative-rep-user-explained">
+                        {tt(
+                            'transferhistoryrow_jsx.involves_negative_rep_user_explained'
+                        )}
+                    </div>
+                    <div
+                        className="ptc involves-negative-rep-user-reveal-memo"
+                        role="button"
+                        onClick={this.onRevealNegativeRepMemo}
+                    >
+                        {tt(
+                            'transferhistoryrow_jsx.involves_negative_rep_user_reveal_memo'
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
         return <span className={classes}>{renderText}</span>;
     }
 }
@@ -90,5 +133,18 @@ export default connect((state, ownProps) => {
         myAccount && currentUser
             ? currentUser.getIn(['private_keys', 'memo_private'])
             : null;
-    return { ...ownProps, memo_private, myAccount };
+    const involvesNegativeRepUser =
+        parseInt(
+            state.global.getIn([
+                'accounts',
+                ownProps.otherAccount,
+                'reputation',
+            ]),
+            10
+        ) < 0 ||
+        parseInt(
+            state.global.getIn(['accounts', ownProps.username, 'reputation']),
+            10
+        ) < 0;
+    return { ...ownProps, memo_private, myAccount, involvesNegativeRepUser };
 })(Memo);
